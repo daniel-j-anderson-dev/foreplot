@@ -14,7 +14,9 @@ use national_weather_service_api::now_string;
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct CommandLineArguments {
+    #[arg(allow_hyphen_values = true)]
     latitude: f64,
+    #[arg(allow_hyphen_values = true)]
     longitude: f64,
     image_path: Option<String>,
 }
