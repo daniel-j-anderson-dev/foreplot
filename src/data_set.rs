@@ -15,7 +15,7 @@ pub fn parse_temperatures(
 ) -> Result<Vec<(DateTime<Utc>, f64)>, Error> {
     use parse_dataset_error_strings::*;
 
-    let values = raw_forecast_data
+    raw_forecast_data
         .get("properties")
         .ok_or(anyhow!("{PREFIX}{PROPERTIES_MISSING}{SUFFIX}"))?
         .get("temperature")
@@ -23,30 +23,29 @@ pub fn parse_temperatures(
         .get("values")
         .ok_or(anyhow!("{PREFIX}{VALUES_MISSING}{SUFFIX}"))?
         .as_array()
-        .ok_or(anyhow!("{PREFIX}{VALUES_NOT_ARRAY}{SUFFIX}"))?;
+        .ok_or(anyhow!("{PREFIX}{VALUES_NOT_ARRAY}{SUFFIX}"))?
+        .into_iter()
+        .enumerate()
+        .map(|(i, value)| {
+            let date_time = value
+                .get("validTime")
+                .ok_or(anyhow!("{PREFIX}{VALID_TIME_MISSING}{i}{SUFFIX}"))?
+                .as_str()
+                .ok_or(anyhow!("{PREFIX}{VALID_TIME_NOT_STRING}{i}{SUFFIX}"))?
+                .split_once('/')
+                .expect("validTime field is a duration. see https://en.wikipedia.org/wiki/ISO_8601#Time_intervals").0
+                .parse()?;
 
-    let mut dataset = Vec::new();
+            let celsius = value
+                .get("value")
+                .ok_or(anyhow!("{PREFIX}{VALUE_MISSING}{i}{SUFFIX}"))?
+                .as_f64()
+                .ok_or(anyhow!("{PREFIX}{VALUE_NOT_NUMBER}{i}{SUFFIX}"))?;
+            let fahrenheit = celsius_to_fahrenheit(celsius);
 
-    for (i, value) in values.into_iter().enumerate() {
-        let date_time = value
-            .get("validTime")
-            .ok_or(anyhow!("{PREFIX}{VALID_TIME_MISSING}{i}{SUFFIX}"))?
-            .as_str()
-            .ok_or(anyhow!("{PREFIX}{VALID_TIME_NOT_STRING}{i}{SUFFIX}"))?
-            .split_once('/')
-            .expect("validTime field is a duration. see https://en.wikipedia.org/wiki/ISO_8601#Time_intervals").0
-            .parse()?;
-
-        let temperature = value
-            .get("value")
-            .ok_or(anyhow!("{PREFIX}{VALUE_MISSING}{i}{SUFFIX}"))?
-            .as_f64()
-            .ok_or(anyhow!("{PREFIX}{VALUE_NOT_NUMBER}{i}{SUFFIX}"))?;
-
-        dataset.push((date_time, celsius_to_fahrenheit(temperature)));
-    }
-
-    Ok(dataset)
+            Ok((date_time, fahrenheit))
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 mod parse_dataset_error_strings {
