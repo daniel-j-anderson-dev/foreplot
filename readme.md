@@ -9,4 +9,4 @@ The default IMAGE_PATH will be `./temperature_chart_LATITUDE_LONGITUDE_DATETIME.
 ## Features
 - temperature plot
   
-<img src="temperature_chart_42.2195_-76.1869_2024-11-26T00:29:15.632704+00:00.png" style="width: 50%; height: 50%;">
+<img src="temperature_chart_42_2195_-76_1869.png" style="width: 50%; height: 50%;">
