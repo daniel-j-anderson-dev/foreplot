@@ -4,15 +4,14 @@ mod plotting;
 
 use crate::{
     data_set::parse_temperatures,
-    national_weather_service_api::{GridPoint, NationalWeatherServiceApi},
+    national_weather_service_api::{now_string, GridPoint, NationalWeatherServiceApi},
     plotting::{plot, PlotArgs},
 };
 use anyhow::Error;
 use clap::Parser;
-use national_weather_service_api::now_string;
 
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(version, about, long_about = None)]
 struct CommandLineArguments {
     #[arg(allow_hyphen_values = true)]
     latitude: f64,
