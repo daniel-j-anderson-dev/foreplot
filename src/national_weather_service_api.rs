@@ -6,12 +6,9 @@ pub use crate::national_weather_service_api::{
 };
 use anyhow::{anyhow, Error};
 use chrono::{DateTime, Utc};
-use reqwest::{
-    blocking::Client,
-    header::{HeaderMap, HeaderValue, USER_AGENT},
-};
 use serde_json::Value as JsonValue;
 use std::{thread::sleep, time::Duration};
+use ureq::{Agent, AgentBuilder};
 
 const ROOT: &str = "https://api.weather.gov";
 const WAIT_PERIOD: Duration = Duration::from_secs(1);
@@ -19,19 +16,16 @@ const WAIT_PERIOD: Duration = Duration::from_secs(1);
 /// https://www.weather.gov/documentation/services-web-api
 #[derive(Debug)]
 pub struct NationalWeatherServiceApi {
-    http_client: Client,
+    http_client: Agent,
 }
 impl NationalWeatherServiceApi {
     pub fn new() -> Result<Self, Error> {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            USER_AGENT,
-            HeaderValue::from_str(
-                format!("NationalWeatherServiceApi_Rust_Bindings_{}", now_string()).as_str(),
-            )?,
-        );
-
-        let http_client = Client::builder().default_headers(headers).build()?;
+        let http_client = AgentBuilder::new()
+            .user_agent(&format!(
+                "NationalWeatherServiceApi_Rust_Bindings_{}",
+                now_string()
+            ))
+            .build();
 
         Ok(Self { http_client })
     }
@@ -42,13 +36,13 @@ impl NationalWeatherServiceApi {
     /// Returns metadata about a given latitude/longitude point. Will [sleep] for [WAIT_PERIOD] after request.
     pub fn points(&self, latitude: f64, longitude: f64) -> Result<JsonValue, Error> {
         let endpoint = format!("{ROOT}/points/{latitude:.4},{longitude:.4}");
-        let response = self.http_client.get(endpoint).send()?;
+        let response = self.http_client.get(&endpoint).call()?;
 
-        if !response.status().is_success() {
+        if !(200..300).contains(&response.status()) {
             return Err(anyhow!("Failed to make request\n{:#?}", response));
         }
 
-        let response_json: JsonValue = response.json()?;
+        let response_json: JsonValue = response.into_json()?;
 
         sleep(WAIT_PERIOD);
 
@@ -65,13 +59,14 @@ impl NationalWeatherServiceApi {
         y: u64,
     ) -> Result<JsonValue, Error> {
         let endpoint = format!("{ROOT}/gridpoints/{wfo}/{x},{y}");
-        let response = self.http_client.get(endpoint).send()?;
+        let response = self.http_client.get(&endpoint).call()?;
 
-        if !response.status().is_success() {
+        if !(200..300).contains(&response.status()) {
             return Err(anyhow!("Failed to make request\n{:#?}", response));
         }
 
-        let response_json: JsonValue = response.json()?;
+        let response_json: JsonValue = response.into_json()?;
+        
         sleep(WAIT_PERIOD);
 
         Ok(response_json)
